@@ -1,0 +1,236 @@
+@page "/red"
+@rendermode InteractiveServer
+@inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+
+<PageTitle>CRUD Red</PageTitle>
+
+<h1>CRUD de Red</h1>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success")" role="alert">
+        @mensaje
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-12 col-lg-5">
+        <div class="card">
+            <div class="card-header">@((editando) ? "Editar red" : "Crear red")</div>
+            <div class="card-body">
+                <EditForm Model="form" OnValidSubmit="GuardarAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label" for="idr">Id</label>
+                        <InputNumber id="idr" class="form-control" @bind-Value="form.Idr" disabled="@editando" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="nombre">Nombre</label>
+                        <InputText id="nombre" class="form-control" @bind-Value="form.Nombre" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="url">URL</label>
+                        <InputText id="url" class="form-control" @bind-Value="form.Url" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="pais">País</label>
+                        <InputText id="pais" class="form-control" @bind-Value="form.Pais" />
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
+                        <button type="button" class="btn btn-secondary" @onclick="LimpiarFormulario">Limpiar</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-7">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Listado de redes</span>
+                <button class="btn btn-outline-primary btn-sm" @onclick="CargarAsync">Recargar</button>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Nombre</th>
+                            <th>URL</th>
+                            <th>País</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (redes.Count == 0)
+                        {
+                            <tr><td colspan="5">No hay datos.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var red in redes)
+                            {
+                                <tr>
+                                    <td>@red.Idr</td>
+                                    <td>@red.Nombre</td>
+                                    <td>@red.Url</td>
+                                    <td>@red.Pais</td>
+                                    <td class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-warning" @onclick="() => Editar(red)">Editar</button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarAsync(red.Idr)">Eliminar</button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string Tabla = "red";
+
+    private List<RedModel> redes = new();
+    private RedModel form = new();
+    private bool editando;
+    private string mensaje = string.Empty;
+    private bool esError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        var datos = await Api.ListarAsync(Tabla);
+
+        redes = datos.Select(d => new RedModel
+        {
+            Idr = ObtenerEntero(d, "idr"),
+            Nombre = ObtenerTexto(d, "nombre"),
+            Url = ObtenerTexto(d, "url"),
+            Pais = ObtenerTexto(d, "pais")
+        }).ToList();
+    }
+
+    private async Task GuardarAsync()
+    {
+        Dictionary<string, object?> payload = new()
+        {
+            ["idr"] = form.Idr,
+            ["nombre"] = form.Nombre,
+            ["url"] = form.Url,
+            ["pais"] = form.Pais
+        };
+
+        (bool exito, string msg) resultado;
+
+        if (editando)
+        {
+            resultado = await Api.ActualizarAsync(Tabla, "idr", form.Idr.ToString(), payload);
+        }
+        else
+        {
+            resultado = await Api.CrearAsync(Tabla, payload);
+        }
+
+        mensaje = resultado.msg;
+        esError = !resultado.exito;
+
+        if (resultado.exito)
+        {
+            LimpiarFormulario();
+            await CargarAsync();
+        }
+    }
+
+    private void Editar(RedModel red)
+    {
+        form = new RedModel
+        {
+            Idr = red.Idr,
+            Nombre = red.Nombre,
+            Url = red.Url,
+            Pais = red.Pais
+        };
+        editando = true;
+        mensaje = string.Empty;
+    }
+
+    private async Task EliminarAsync(int id)
+    {
+        // Algunas implementaciones backend esperan "id" aunque en SQL sea "idr".
+        // Se intenta primero con "idr" y luego con fallback "id".
+        var resultado = await Api.EliminarAsync(Tabla, "idr", id.ToString());
+
+        if (!resultado.exito)
+        {
+            var intentoAlterno = await Api.EliminarAsync(Tabla, "id", id.ToString());
+            if (intentoAlterno.exito)
+            {
+                resultado = intentoAlterno;
+            }
+        }
+
+        mensaje = resultado.mensaje;
+        esError = !resultado.exito;
+
+        if (resultado.exito)
+        {
+            if (editando && form.Idr == id)
+            {
+                LimpiarFormulario();
+            }
+
+            await CargarAsync();
+        }
+    }
+
+    private void LimpiarFormulario()
+    {
+        form = new RedModel();
+        editando = false;
+    }
+
+    private static int ObtenerEntero(Dictionary<string, object?> dic, string clave)
+    {
+        if (!dic.TryGetValue(clave, out var valor) || valor is null)
+        {
+            return 0;
+        }
+
+        return valor switch
+        {
+            int i => i,
+            long l => (int)l,
+            double d => (int)d,
+            decimal m => (int)m,
+            _ => int.TryParse(valor.ToString(), out var n) ? n : 0
+        };
+    }
+
+    private static string ObtenerTexto(Dictionary<string, object?> dic, string clave)
+    {
+        return dic.TryGetValue(clave, out var valor) && valor is not null
+            ? valor.ToString() ?? string.Empty
+            : string.Empty;
+    }
+
+    private sealed class RedModel
+    {
+        public int Idr { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
+        public string Pais { get; set; } = string.Empty;
+    }
+}

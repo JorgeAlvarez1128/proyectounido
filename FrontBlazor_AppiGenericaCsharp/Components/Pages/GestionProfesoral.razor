@@ -1,0 +1,363 @@
+@page "/gestion-profesoral"
+@rendermode InteractiveServer
+@using FrontBlazor_AppiGenericaCsharp.Services
+@inject ApiService Api
+
+<PageTitle>Gestión Profesoral</PageTitle>
+
+<h1>Módulo Gestión Profesoral</h1>
+<p class="text-muted">Vista maestro-detalle para docente y sus relaciones. Incluye CRUD para catálogos asociados.</p>
+
+<div class="alert alert-info" role="alert">
+    <strong>Maestro seleccionado:</strong>
+    @if (selectedDocenteId is null)
+    {
+        <span>Ninguno. Selecciona un docente para gestionar sus tablas detalle.</span>
+    }
+    else
+    {
+        <span>Docente @selectedDocenteId</span>
+    }
+</div>
+
+<GenericCrud Title="Docente (Maestro)"
+             TableName="docente"
+             Fields="docenteFields"
+             KeyFields="docenteKeys"
+             LookupByField="docenteLookups"
+             EnableSelection="true"
+             OnSelected="OnDocenteSelected" />
+
+@if (selectedDocenteId is not null)
+{
+    <h3 class="mt-4">Detalle del docente @selectedDocenteId</h3>
+
+    <GenericCrud Title="Evaluación Docente"
+                 TableName="evaluacion_docente"
+                 Fields="evaluacionFields"
+                 KeyFields="evaluacionKeys"
+                 LookupByField="evaluacionLookups"
+                 ParentFilterField="docente"
+                 ParentFilterValue="@selectedDocenteId" />
+
+    <GenericCrud Title="Experiencia"
+                 TableName="experiencia"
+                 Fields="experienciaFields"
+                 KeyFields="experienciaKeys"
+                 LookupByField="experienciaLookups"
+                 ParentFilterField="docente"
+                 ParentFilterValue="@selectedDocenteId" />
+
+    <GenericCrud Title="Reconocimiento"
+                 TableName="reconocimiento"
+                 Fields="reconocimientoFields"
+                 KeyFields="reconocimientoKeys"
+                 LookupByField="reconocimientoLookups"
+                 ParentFilterField="docente"
+                 ParentFilterValue="@selectedDocenteId" />
+
+    <GenericCrud Title="Estudios Realizados (Maestro detalle secundario)"
+                 TableName="estudios_realizados"
+                 Fields="estudiosFields"
+                 KeyFields="estudiosKeys"
+                 LookupByField="estudiosLookups"
+                 ParentFilterField="docente"
+                 ParentFilterValue="@selectedDocenteId"
+                 EnableSelection="true"
+                 OnSelected="OnEstudioSelected" />
+
+    <GenericCrud Title="Red Docente"
+                 TableName="red_docente"
+                 Fields="redDocenteFields"
+                 KeyFields="redDocenteKeys"
+                 LookupByField="redDocenteLookups"
+                 ParentFilterField="docente"
+                 ParentFilterValue="@selectedDocenteId" />
+
+    <GenericCrud Title="Docente Departamento"
+                 TableName="docente_departamento"
+                 Fields="docenteDepartamentoFields"
+                 KeyFields="docenteDepartamentoKeys"
+                 LookupByField="docenteDepartamentoLookups"
+                 ParentFilterField="docente"
+                 ParentFilterValue="@selectedDocenteId" />
+
+    <GenericCrud Title="Intereses Futuros"
+                 TableName="intereses_futuros"
+                 Fields="interesesFuturosFields"
+                 KeyFields="interesesFuturosKeys"
+                 LookupByField="interesesFuturosLookups"
+                 ParentFilterField="docente"
+                 ParentFilterValue="@selectedDocenteId" />
+
+    <GenericCrud Title="Alianza"
+                 TableName="alianza"
+                 Fields="alianzaFields"
+                 KeyFields="alianzaKeys"
+                 LookupByField="alianzaLookups"
+                 ParentFilterField="docente"
+                 ParentFilterValue="@selectedDocenteId" />
+}
+
+@if (selectedEstudioId is not null)
+{
+    <h3 class="mt-4">Detalle del estudio @selectedEstudioId</h3>
+
+    <GenericCrud Title="Beca"
+                 TableName="beca"
+                 Fields="becaFields"
+                 KeyFields="becaKeys"
+                 LookupByField="becaLookups"
+                 ParentFilterField="estudios"
+                 ParentFilterValue="@selectedEstudioId" />
+
+    <GenericCrud Title="Apoyo Profesoral"
+                 TableName="apoyo_profesoral"
+                 Fields="apoyoFields"
+                 KeyFields="apoyoKeys"
+                 LookupByField="apoyoLookups"
+                 ParentFilterField="estudios"
+                 ParentFilterValue="@selectedEstudioId" />
+
+    <GenericCrud Title="Estudio Área de Conocimiento"
+                 TableName="estudio_ac"
+                 Fields="estudioAcFields"
+                 KeyFields="estudioAcKeys"
+                 LookupByField="estudioAcLookups"
+                 ParentFilterField="estudio"
+                 ParentFilterValue="@selectedEstudioId" />
+}
+
+<h3 class="mt-4">Catálogos del módulo</h3>
+<GenericCrud Title="Área de Conocimiento" TableName="area_conocimiento" Fields="areaConocimientoFields" KeyFields="areaConocimientoKeys" />
+<GenericCrud Title="Término Clave" TableName="termino_clave" Fields="terminoClaveFields" KeyFields="terminoClaveKeys" />
+
+@code {
+    private string? selectedDocenteId;
+    private string? selectedEstudioId;
+
+    private readonly List<string> docenteKeys = ["cedula"];
+    private readonly List<string> evaluacionKeys = ["id"];
+    private readonly List<string> experienciaKeys = ["id"];
+    private readonly List<string> reconocimientoKeys = ["id"];
+    private readonly List<string> estudiosKeys = ["id"];
+    private readonly List<string> redDocenteKeys = ["red", "docente"];
+    private readonly List<string> docenteDepartamentoKeys = ["docente", "departamento"];
+    private readonly List<string> becaKeys = ["estudios"];
+    private readonly List<string> apoyoKeys = ["estudios"];
+    private readonly List<string> alianzaKeys = ["aliado", "departamento"];
+    private readonly List<string> estudioAcKeys = ["estudio", "area_conocimiento"];
+    private readonly List<string> interesesFuturosKeys = ["docente", "termino_clave"];
+    private readonly List<string> areaConocimientoKeys = ["id"];
+    private readonly List<string> terminoClaveKeys = ["termino"];
+
+    private readonly List<CrudFieldDefinition> docenteFields =
+    [
+        new() { Name = "cedula", Label = "Cédula", Type = FieldType.Integer, Required = true },
+        new() { Name = "nombres", Label = "Nombres", Required = true },
+        new() { Name = "apellidos", Label = "Apellidos", Required = true },
+        new() { Name = "genero", Label = "Género", Required = true },
+        new() { Name = "cargo", Label = "Cargo", Required = true },
+        new() { Name = "fecha_nacimiento", Label = "Fecha nacimiento", Type = FieldType.Date, Required = true },
+        new() { Name = "correo", Label = "Correo", Required = true },
+        new() { Name = "telefono", Label = "Teléfono", Required = true },
+        new() { Name = "url_cvlac", Label = "URL CvLac", Required = true },
+        new() { Name = "fecha_actualizacion", Label = "Fecha actualización", Type = FieldType.Date, Required = true },
+        new() { Name = "escalafon", Label = "Escalafón", Required = true },
+        new() { Name = "perfil", Label = "Perfil", Required = true, Multiline = true },
+        new() { Name = "cat_minciencia", Label = "Cat. Minciencia" },
+        new() { Name = "conv_minciencia", Label = "Conv. Minciencia", Required = true },
+        new() { Name = "nacionalidaad", Label = "Nacionalidad", Required = true },
+        new() { Name = "linea_investigacion_principal", Label = "Línea principal", Type = FieldType.Integer, IsForeignKey = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> evaluacionFields =
+    [
+        new() { Name = "calificacion", Label = "Calificación", Type = FieldType.Decimal, Required = true },
+        new() { Name = "semestre", Label = "Semestre", Required = true },
+        new() { Name = "docente", Label = "Docente", Type = FieldType.Integer, IsForeignKey = true, Required = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> experienciaFields =
+    [
+        new() { Name = "nombre_cargo", Label = "Cargo", Required = true },
+        new() { Name = "institucion", Label = "Institución", Required = true },
+        new() { Name = "tipo", Label = "Tipo", Required = true },
+        new() { Name = "fecha_inicio", Label = "Fecha inicio", Type = FieldType.Date, Required = true },
+        new() { Name = "fecha_fin", Label = "Fecha fin", Type = FieldType.Date },
+        new() { Name = "docente", Label = "Docente", Type = FieldType.Integer, IsForeignKey = true, Required = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> reconocimientoFields =
+    [
+        new() { Name = "tipo", Label = "Tipo", Required = true },
+        new() { Name = "fecha", Label = "Fecha", Type = FieldType.Date, Required = true },
+        new() { Name = "institucion", Label = "Institución", Required = true },
+        new() { Name = "nombre", Label = "Nombre", Required = true },
+        new() { Name = "ambito", Label = "Ámbito", Required = true },
+        new() { Name = "docente", Label = "Docente", Type = FieldType.Integer, IsForeignKey = true, Required = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> estudiosFields =
+    [
+        new() { Name = "id", Label = "Id", Type = FieldType.Integer, Required = true },
+        new() { Name = "titulo", Label = "Título", Required = true },
+        new() { Name = "universidad", Label = "Universidad", Required = true },
+        new() { Name = "fecha", Label = "Fecha", Type = FieldType.Date, Required = true },
+        new() { Name = "tipo", Label = "Tipo", Required = true },
+        new() { Name = "ciudad", Label = "Ciudad", Required = true },
+        new() { Name = "docente", Label = "Docente", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "ins_acreditada", Label = "Acreditada", Type = FieldType.Boolean, Required = true },
+        new() { Name = "metodologia", Label = "Metodología", Required = true },
+        new() { Name = "perfil_egresado", Label = "Perfil egresado", Required = true, Multiline = true },
+        new() { Name = "pais", Label = "País", Required = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> redDocenteFields =
+    [
+        new() { Name = "red", Label = "Red", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "docente", Label = "Docente", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "fecha_inicio", Label = "Fecha inicio", Type = FieldType.Date, Required = true },
+        new() { Name = "fecha_fin", Label = "Fecha fin" },
+        new() { Name = "act_destacadas", Label = "Actividades", Required = true, Multiline = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> docenteDepartamentoFields =
+    [
+        new() { Name = "docente", Label = "Docente", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "departamento", Label = "Departamento/Programa", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "dedicacion", Label = "Dedicación", Required = true },
+        new() { Name = "modalidad", Label = "Modalidad", Required = true },
+        new() { Name = "fecha_ingreso", Label = "Fecha ingreso", Type = FieldType.Date, Required = true },
+        new() { Name = "fecha_salida", Label = "Fecha salida", Type = FieldType.Date }
+    ];
+
+    private readonly List<CrudFieldDefinition> becaFields =
+    [
+        new() { Name = "estudios", Label = "Estudio", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "tipo", Label = "Tipo", Required = true },
+        new() { Name = "institucion", Label = "Institución", Required = true },
+        new() { Name = "fecha_inicio", Label = "Fecha inicio", Type = FieldType.Date, Required = true },
+        new() { Name = "fecha_fin", Label = "Fecha fin", Type = FieldType.Date }
+    ];
+
+    private readonly List<CrudFieldDefinition> apoyoFields =
+    [
+        new() { Name = "estudios", Label = "Estudio", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "con_apoyo", Label = "Con apoyo", Type = FieldType.Boolean, Required = true },
+        new() { Name = "institucion", Label = "Institución", Required = true },
+        new() { Name = "tipo", Label = "Tipo", Required = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> alianzaFields =
+    [
+        new() { Name = "aliado", Label = "Aliado", Type = FieldType.Long, IsForeignKey = true, Required = true },
+        new() { Name = "departamento", Label = "Programa", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "fecha_inicio", Label = "Fecha inicio", Type = FieldType.Date, Required = true },
+        new() { Name = "fecha_fin", Label = "Fecha fin", Type = FieldType.Date },
+        new() { Name = "docente", Label = "Docente", Type = FieldType.Integer, IsForeignKey = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> estudioAcFields =
+    [
+        new() { Name = "estudio", Label = "Estudio", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "area_conocimiento", Label = "Área", Type = FieldType.Integer, IsForeignKey = true, Required = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> interesesFuturosFields =
+    [
+        new() { Name = "docente", Label = "Docente", Type = FieldType.Integer, IsForeignKey = true, Required = true },
+        new() { Name = "termino_clave", Label = "Término", IsForeignKey = true, Required = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> areaConocimientoFields =
+    [
+        new() { Name = "id", Label = "Id", Type = FieldType.Integer, Required = true },
+        new() { Name = "gran_area", Label = "Gran área", Required = true },
+        new() { Name = "area", Label = "Área", Required = true },
+        new() { Name = "disciplina", Label = "Disciplina", Required = true }
+    ];
+
+    private readonly List<CrudFieldDefinition> terminoClaveFields =
+    [
+        new() { Name = "termino", Label = "Término", Required = true },
+        new() { Name = "termino_ingles", Label = "Término inglés" }
+    ];
+
+    private Dictionary<string, List<LookupOption>> docenteLookups = new();
+    private Dictionary<string, List<LookupOption>> evaluacionLookups = new();
+    private Dictionary<string, List<LookupOption>> experienciaLookups = new();
+    private Dictionary<string, List<LookupOption>> reconocimientoLookups = new();
+    private Dictionary<string, List<LookupOption>> estudiosLookups = new();
+    private Dictionary<string, List<LookupOption>> redDocenteLookups = new();
+    private Dictionary<string, List<LookupOption>> docenteDepartamentoLookups = new();
+    private Dictionary<string, List<LookupOption>> becaLookups = new();
+    private Dictionary<string, List<LookupOption>> apoyoLookups = new();
+    private Dictionary<string, List<LookupOption>> alianzaLookups = new();
+    private Dictionary<string, List<LookupOption>> estudioAcLookups = new();
+    private Dictionary<string, List<LookupOption>> interesesFuturosLookups = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarLookupsAsync();
+    }
+
+    private async Task OnDocenteSelected(Dictionary<string, object?> row)
+    {
+        selectedDocenteId = row.TryGetValue("cedula", out var id) ? id?.ToString() : null;
+        selectedEstudioId = null;
+        await CargarLookupsAsync();
+    }
+
+    private async Task OnEstudioSelected(Dictionary<string, object?> row)
+    {
+        selectedEstudioId = row.TryGetValue("id", out var id) ? id?.ToString() : null;
+        await CargarLookupsAsync();
+    }
+
+    private async Task CargarLookupsAsync()
+    {
+        var docentes = await Api.ListarAsync("docente");
+        var lineas = await Api.ListarAsync("linea_investigacion");
+        var redes = await Api.ListarAsync("red");
+        var programas = await Api.ListarAsync("programa");
+        var estudios = await Api.ListarAsync("estudios_realizados");
+        var aliados = await Api.ListarAsync("aliado");
+        var areas = await Api.ListarAsync("area_conocimiento");
+        var terminos = await Api.ListarAsync("termino_clave");
+
+        var docentesOptions = MapOptions(docentes, "cedula", "nombres");
+        var lineasOptions = MapOptions(lineas, "id", "nombre");
+        var redesOptions = MapOptions(redes, "idr", "nombre");
+        var programasOptions = MapOptions(programas, "id", "nombre");
+        var estudiosOptions = MapOptions(estudios, "id", "titulo");
+        var aliadosOptions = MapOptions(aliados, "nit", "razon_social");
+        var areasOptions = MapOptions(areas, "id", "area");
+        var terminosOptions = MapOptions(terminos, "termino", "termino");
+
+        docenteLookups = new() { ["linea_investigacion_principal"] = lineasOptions };
+        evaluacionLookups = new() { ["docente"] = docentesOptions };
+        experienciaLookups = new() { ["docente"] = docentesOptions };
+        reconocimientoLookups = new() { ["docente"] = docentesOptions };
+        estudiosLookups = new() { ["docente"] = docentesOptions };
+        redDocenteLookups = new() { ["docente"] = docentesOptions, ["red"] = redesOptions };
+        docenteDepartamentoLookups = new() { ["docente"] = docentesOptions, ["departamento"] = programasOptions };
+        becaLookups = new() { ["estudios"] = estudiosOptions };
+        apoyoLookups = new() { ["estudios"] = estudiosOptions };
+        alianzaLookups = new() { ["aliado"] = aliadosOptions, ["departamento"] = programasOptions, ["docente"] = docentesOptions };
+        estudioAcLookups = new() { ["estudio"] = estudiosOptions, ["area_conocimiento"] = areasOptions };
+        interesesFuturosLookups = new() { ["docente"] = docentesOptions, ["termino_clave"] = terminosOptions };
+    }
+
+    private static List<LookupOption> MapOptions(List<Dictionary<string, object?>> data, string keyField, string textField)
+    {
+        return data
+            .Select(row => new LookupOption
+            {
+                Value = row.TryGetValue(keyField, out var key) ? key?.ToString() ?? string.Empty : string.Empty,
+                Text = row.TryGetValue(textField, out var text) ? text?.ToString() ?? string.Empty : string.Empty
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+            .ToList();
+    }
+}
