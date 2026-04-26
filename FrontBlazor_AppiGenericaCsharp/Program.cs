@@ -1,5 +1,6 @@
 using FrontBlazor_AppiGenericaCsharp.Services;
 using FrontBlazor_AppiGenericaCsharp.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,9 @@ builder.Services.AddScoped(sp => new HttpClient
     BaseAddress = new Uri(apiBaseUrl)
 });
 builder.Services.AddScoped<ApiService>();
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddScoped<AuthSessionService>();
 
 var app = builder.Build();
 

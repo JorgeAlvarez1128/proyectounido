@@ -1,45 +1,97 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject AuthSessionService Auth
+@inject NavigationManager Nav
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">FrontBlazor_AppiGenericaCsharp</a>
+                <a class="navbar-brand" href="">Proyecto Unido</a>
     </div>
 </div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
+                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Home</NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="red">
-                <span class="bi bi-diagram-3-fill-nav-menu" aria-hidden="true"></span> CRUD Red
-            </NavLink>
-        </div>
+        @if (!Auth.EstaAutenticado)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link fw-bold text-warning" href="login">🔐 Iniciar sesión</NavLink>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3">
+                <span class="nav-link text-info">@Auth.SesionActual?.Usuario</span>
+            </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="investigacion">
-                <span class="bi bi-journal-text-nav-menu" aria-hidden="true"></span> CRUD Investigación
-            </NavLink>
-        </div>
+            <AuthorizeView>
+                <Authorized>
+                    @if (PuedeVerRuta("/red"))
+                    {
+                        <div class="nav-item px-3"><NavLink class="nav-link" href="red">CRUD Red</NavLink></div>
+                    }
+                    @if (PuedeVerRuta("/investigacion"))
+                    {
+                        <div class="nav-item px-3"><NavLink class="nav-link" href="investigacion">CRUD Investigación</NavLink></div>
+                    }
+                    @if (PuedeVerRuta("/aliado"))
+                    {
+                        <div class="nav-item px-3"><NavLink class="nav-link" href="aliado">CRUD Aliado</NavLink></div>
+                    }
+                    @if (PuedeVerRuta("/gestion-profesoral"))
+                    {
+                        <div class="nav-item px-3"><NavLink class="nav-link" href="gestion-profesoral">Gestión Profesoral</NavLink></div>
+                    }
+                    @if (PuedeVerRuta("/gestion-profesoral-tablas"))
+                    {
+                        <div class="nav-item px-3"><NavLink class="nav-link" href="gestion-profesoral-tablas">Tablas Gestión Profesoral</NavLink></div>
+                    }
+                </Authorized>
+            </AuthorizeView>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="aliado">
-                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> CRUD Aliado
-            </NavLink>
-        </div>
+            @if (Auth.TieneRol("Administrador"))
+            {
+                <div class="nav-item px-3">
+                    <span class="nav-link text-warning">Admin: CRUD Usuarios y Roles habilitado en API</span>
+                </div>
+            }
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="gestion-profesoral">
-                <span class="bi bi-person-vcard-fill-nav-menu" aria-hidden="true"></span> Gestión Profesoral
-            </NavLink>
-        </div>
+            <div class="nav-item px-3">
+                <button class="btn btn-outline-light btn-sm mt-2" @onclick="CerrarSesion">Cerrar sesión</button>
+            </div>
+        }
+    </nav>
+</div>
 
- 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="gestion-profesoral-tablas">
-                <span class="bi bi-table-nav-menu" aria-hidden="true"></span> Tablas Gestión Profesoral
-            </NavLink>
-        </div>
-       
+@implements IDisposable
+
+@code {
+    protected override void OnInitialized()
+    {
+        Auth.OnAuthChanged += ActualizarVista;
+    }
+
+private bool PuedeVerRuta(string ruta)
+{
+    return Auth.TieneRol("Administrador") || Auth.TieneRol("Consulta") || Auth.TieneRuta(ruta);
+}
+
+    private void CerrarSesion()
+    {
+        Auth.Logout();
+        Nav.NavigateTo("/");
+    }
+
+    private void ActualizarVista()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Auth.OnAuthChanged -= ActualizarVista;
+    }
+}

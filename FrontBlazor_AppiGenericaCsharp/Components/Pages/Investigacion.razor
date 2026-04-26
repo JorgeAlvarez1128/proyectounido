@@ -1,6 +1,8 @@
 @page "/investigacion"
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+@inject AuthSessionService Auth
 
 <PageTitle>CRUD Investigación</PageTitle>
 
@@ -17,35 +19,41 @@
 <div class="row g-4">
     <div class="col-12 col-lg-5">
         <div class="card">
-            <div class="card-header">@((editando) ? "Editar línea" : "Crear línea")</div>
+                        <div class="card-header">@(editando ? "Editar línea" : "Crear línea")</div>
             <div class="card-body">
-                <EditForm Model="form" OnValidSubmit="GuardarAsync">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
+                                @if (PuedeCrear || PuedeActualizar)
+                {
+                    <EditForm Model="form" OnValidSubmit="GuardarAsync" FormName="@FormName">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
 
-                    @if (editando)
-                    {
+                        @if (editando)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Id</label>
+                                <input class="form-control" value="@form.Id" disabled />
+                            </div>
+                        }
+
                         <div class="mb-3">
-                            <label class="form-label">Id</label>
-                            <input class="form-control" value="@form.Id" disabled />
+                                                        <label class="form-label" for="nombre">Nombre</label>
+                            <InputText id="nombre" class="form-control" @bind-Value="form.Nombre" />
                         </div>
-                    }
 
-                    <div class="mb-3">
-                        <label class="form-label" for="nombre">Nombre</label>
-                        <InputText id="nombre" class="form-control" @bind-Value="form.Nombre" />
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="descripcion">Descripción</label>
+                            <InputTextArea id="descripcion" class="form-control" @bind-Value="form.Descripcion" />
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label" for="descripcion">Descripción</label>
-                        <InputTextArea id="descripcion" class="form-control" @bind-Value="form.Descripcion" />
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
-                        <button type="button" class="btn btn-secondary" @onclick="LimpiarFormulario">Limpiar</button>
-                    </div>
-                </EditForm>
+                        <div class="d-flex gap-2">
+                            @if ((editando && PuedeActualizar) || (!editando && PuedeCrear))
+                            {
+                                <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
+                            }
+                            <button type="button" class="btn btn-secondary" @onclick="LimpiarFormulario">Limpiar</button>
+                        </div>
+                                            </EditForm>
+                }
             </div>
         </div>
     </div>
@@ -80,8 +88,14 @@
                                     <td>@linea.Nombre</td>
                                     <td>@linea.Descripcion</td>
                                     <td class="d-flex gap-2">
-                                        <button class="btn btn-sm btn-warning" @onclick="() => Editar(linea)">Editar</button>
-                                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarAsync(linea.Id)">Eliminar</button>
+                                                                                @if (PuedeActualizar)
+                                        {
+                                            <button class="btn btn-sm btn-warning" @onclick="() => Editar(linea)">Editar</button>
+                                        }
+                                        @if (PuedeEliminar)
+                                        {
+                                            <button class="btn btn-sm btn-danger" @onclick="() => EliminarAsync(linea.Id)">Eliminar</button>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -96,16 +110,18 @@
 @code {
     private const string Tabla = "linea_investigacion";
 
+    private readonly string FormName = "form-linea_investigacion";
     private List<InvestigacionModel> lineas = new();
     private InvestigacionModel form = new();
     private bool editando;
     private string mensaje = string.Empty;
     private bool esError;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CargarAsync();
-    }
+    private bool PuedeCrear => Auth.PuedeCrear();
+    private bool PuedeActualizar => Auth.PuedeActualizar();
+    private bool PuedeEliminar => Auth.PuedeEliminar();
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
 
     private async Task CargarAsync()
     {
@@ -121,25 +137,25 @@
 
     private async Task GuardarAsync()
     {
+        if ((!editando && !PuedeCrear) || (editando && !PuedeActualizar))
+        {
+            mensaje = "No tienes permisos para esta operación.";
+            esError = true;
+            return;
+        }
+
         Dictionary<string, object?> payload = new()
         {
             ["nombre"] = form.Nombre,
             ["descripcion"] = form.Descripcion
         };
 
-        (bool exito, string mensaje) resultado;
+(bool exito, string mensaje) resultado = editando
+    ? await Api.ActualizarAsync(Tabla, "id", form.Id.ToString(), payload)
+    : await Api.CrearAsync(Tabla, payload);
 
-        if (editando)
-        {
-            resultado = await Api.ActualizarAsync(Tabla, "id", form.Id.ToString(), payload);
-        }
-        else
-        {
-            resultado = await Api.CrearAsync(Tabla, payload);
-        }
-
-        mensaje = resultado.mensaje;
-        esError = !resultado.exito;
+this.mensaje = resultado.mensaje;
+esError = !resultado.exito;
 
         if (resultado.exito)
         {
@@ -162,6 +178,13 @@
 
     private async Task EliminarAsync(int id)
     {
+        if (!PuedeEliminar)
+        {
+            mensaje = "No tienes permisos para eliminar.";
+            esError = true;
+            return;
+        }
+
         var resultado = await Api.EliminarAsync(Tabla, "id", id.ToString());
         mensaje = resultado.mensaje;
         esError = !resultado.exito;
@@ -201,13 +224,11 @@
     }
 
     private static string ObtenerTexto(Dictionary<string, object?> dic, string clave)
-    {
-        return dic.TryGetValue(clave, out var valor) && valor is not null
+                => dic.TryGetValue(clave, out var valor) && valor is not null
             ? valor.ToString() ?? string.Empty
             : string.Empty;
-    }
 
-    private sealed class InvestigacionModel
+                private sealed class InvestigacionModel
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = string.Empty;

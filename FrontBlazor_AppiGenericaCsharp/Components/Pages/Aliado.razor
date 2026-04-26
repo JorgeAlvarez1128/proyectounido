@@ -1,6 +1,8 @@
 @page "/aliado"
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject FrontBlazor_AppiGenericaCsharp.Services.ApiService Api
+@inject AuthSessionService Auth
 
 <PageTitle>CRUD Aliado</PageTitle>
 
@@ -18,7 +20,9 @@
         <div class="card">
             <div class="card-header">@((editando) ? "Editar aliado" : "Crear aliado")</div>
             <div class="card-body">
-                <EditForm Model="form" OnValidSubmit="GuardarAsync">
+                                @if (PuedeCrear || PuedeActualizar)
+                {
+                <EditForm Model="form" OnValidSubmit="GuardarAsync" FormName="@($"form-{Tabla}")">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
@@ -53,10 +57,14 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
+                                                @if ((editando && PuedeActualizar) || (!editando && PuedeCrear))
+                        {
+                            <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
+                        }
                         <button type="button" class="btn btn-secondary" @onclick="LimpiarFormulario">Limpiar</button>
                     </div>
                 </EditForm>
+                                }
             </div>
         </div>
     </div>
@@ -97,8 +105,14 @@
                                     <td>@aliado.Telefono</td>
                                     <td>@aliado.Ciudad</td>
                                     <td class="d-flex gap-2">
-                                        <button class="btn btn-sm btn-warning" @onclick="() => Editar(aliado)">Editar</button>
-                                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarAsync(aliado.Nit)">Eliminar</button>
+                                                                                @if (PuedeActualizar)
+                                        {
+                                            <button class="btn btn-sm btn-warning" @onclick="() => Editar(aliado)">Editar</button>
+                                        }
+                                        @if (PuedeEliminar)
+                                        {
+                                            <button class="btn btn-sm btn-danger" @onclick="() => EliminarAsync(aliado.Nit)">Eliminar</button>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -118,6 +132,10 @@
     private bool editando;
     private string mensaje = string.Empty;
     private bool esError;
+
+    private bool PuedeCrear => Auth.PuedeCrear();
+    private bool PuedeActualizar => Auth.PuedeActualizar();
+    private bool PuedeEliminar => Auth.PuedeEliminar();
 
     protected override async Task OnInitializedAsync()
     {
@@ -141,6 +159,13 @@
 
     private async Task GuardarAsync()
     {
+                if ((!editando && !PuedeCrear) || (editando && !PuedeActualizar))
+        {
+            mensaje = "No tienes permisos para esta operación.";
+            esError = true;
+            return;
+        }
+
         Dictionary<string, object?> payload = new()
         {
             ["nit"] = form.Nit,
@@ -189,6 +214,13 @@
 
     private async Task EliminarAsync(long nit)
     {
+                if (!PuedeEliminar)
+        {
+            mensaje = "No tienes permisos para eliminar.";
+            esError = true;
+            return;
+        }
+
         var resultado = await Api.EliminarAsync(Tabla, "nit", nit.ToString());
 
         if (!resultado.exito)

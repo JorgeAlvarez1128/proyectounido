@@ -45,7 +45,8 @@ namespace ApiGenericaCsharp.Controllers
     /// - Proporcionar metadatos útiles en las respuestas para facilitar el uso de la API
     /// </summary>
     [Route("api/{tabla}")]                                // Ruta dinámica: /api/usuarios, /api/productos, etc.
-    [ApiController]                                       // Activa validación automática, binding, y comportamientos de API REST
+    [ApiController]   
+    [Authorize]                                    // Activa validación automática, binding, y comportamientos de API REST
     public class EntidadesController : ControllerBase
     {
         // Dependencias inyectadas - Aplicando DIP (Dependency Inversion Principle)
@@ -543,7 +544,6 @@ namespace ApiGenericaCsharp.Controllers
         /// Ruta: POST /api/{tabla}
         /// Ejemplo: POST /api/usuario con body JSON
         /// </summary>
-        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> CrearAsync(
             string tabla,                                           // Del path: /api/{tabla}
@@ -554,6 +554,12 @@ namespace ApiGenericaCsharp.Controllers
         {
             try
             {
+                                var validacionPermiso = ValidarPermisoOperacion("crear");
+                if (validacionPermiso is not null) return validacionPermiso;
+
+                var validacionAdmin = ValidarAccesoAdminTabla(tabla);
+                if (validacionAdmin is not null) return validacionAdmin;
+
                 // LOGGING DE AUDITORÍA
                 _logger.LogInformation(
                     "INICIO creación - Tabla: {Tabla}, Esquema: {Esquema}, Campos a encriptar: {CamposEncriptar}",
@@ -678,7 +684,6 @@ namespace ApiGenericaCsharp.Controllers
         /// Ejemplo: PUT /api/usuario/email/juan@test.com con body JSON
         /// Con encriptación: PUT /api/usuario/email/juan@test.com?camposEncriptar=contrasena
         /// </summary>
-        [AllowAnonymous]
         [HttpPut("{nombreClave}/{valorClave}")]
         public async Task<IActionResult> ActualizarAsync(
             string tabla,                                           // Del path: /api/{tabla}
@@ -691,6 +696,12 @@ namespace ApiGenericaCsharp.Controllers
         {
             try
             {
+                                var validacionPermiso = ValidarPermisoOperacion("actualizar");
+                if (validacionPermiso is not null) return validacionPermiso;
+
+                var validacionAdmin = ValidarAccesoAdminTabla(tabla);
+                if (validacionAdmin is not null) return validacionAdmin;
+
                 // LOGGING DE AUDITORÍA
                 _logger.LogInformation(
                     "INICIO actualización - Tabla: {Tabla}, Clave: {Clave}={Valor}, Esquema: {Esquema}, Campos a encriptar: {CamposEncriptar}",
@@ -829,7 +840,6 @@ namespace ApiGenericaCsharp.Controllers
         /// Ruta: DELETE /api/{tabla}/{nombreClave}/{valorClave}
         /// Ejemplo: DELETE /api/producto/codigo/PRD001
         /// </summary>
-        [AllowAnonymous]
         [HttpDelete("{nombreClave}/{valorClave}")]
         public async Task<IActionResult> EliminarAsync(
             string tabla,                                          // Del path: /api/{tabla}
@@ -840,6 +850,12 @@ namespace ApiGenericaCsharp.Controllers
         {
             try
             {
+                                var validacionPermiso = ValidarPermisoOperacion("eliminar");
+                if (validacionPermiso is not null) return validacionPermiso;
+
+                var validacionAdmin = ValidarAccesoAdminTabla(tabla);
+                if (validacionAdmin is not null) return validacionAdmin;
+
                 // LOGGING DE AUDITORÍA
                 _logger.LogInformation(
                     "INICIO eliminación - Tabla: {Tabla}, Clave: {Clave}={Valor}, Esquema: {Esquema}",
@@ -1306,6 +1322,50 @@ namespace ApiGenericaCsharp.Controllers
                     sugerencia = "Revise los logs para más detalles."
                 });
             }
+        }
+
+               private IActionResult? ValidarPermisoOperacion(string permisoRequerido)
+        {
+            if (User.IsInRole("Administrador"))
+            {
+                return null;
+            }
+
+            var permisosUsuario = User.Claims
+                .Where(c => c.Type == "permiso")
+                .Select(c => c.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (permisosUsuario.Contains(permisoRequerido))
+            {
+                return null;
+            }
+
+            return StatusCode(403, new
+            {
+                estado = 403,
+                mensaje = "Acceso denegado.",
+                detalle = $"No tienes permiso para {permisoRequerido}."
+            });
+        }
+
+        private IActionResult? ValidarAccesoAdminTabla(string tabla)
+        {
+            var tablaNormalizada = tabla?.Trim().ToLowerInvariant();
+            var esTablaSeguridad = tablaNormalizada == "usuario" || tablaNormalizada == "rol" ||
+                                   tablaNormalizada == "rol_usuario" || tablaNormalizada == "rutarol";
+
+            if (!esTablaSeguridad || User.IsInRole("Administrador"))
+            {
+                return null;
+            }
+
+            return StatusCode(403, new
+            {
+                estado = 403,
+                mensaje = "Acceso denegado.",
+                detalle = "Solo el Administrador puede modificar usuarios y roles."
+            });
         }
 
         // aquí se puede agregar más endpoints en el futuro (DELETE, PATCH, etc.)

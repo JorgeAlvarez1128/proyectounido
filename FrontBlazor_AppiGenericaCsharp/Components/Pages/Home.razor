@@ -1,7 +1,29 @@
 ﻿@page "/"
+@inject AuthSessionService Auth
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Inicio</PageTitle>
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
+<div class="container py-5">
+    <div class="p-4 p-md-5 rounded-4 shadow-sm border bg-white">
+        <div class="row align-items-center g-4">
+            <div class="col-12 col-lg-8">
+                <h1 class="display-6 fw-bold mb-3">Proyecto API Genérica</h1>
+                <p class="lead text-secondary mb-0">
+                    Accede con tu usuario y contraseña para ver menús y acciones según tu rol.
+                </p>
+            </div>
+            <div class="col-12 col-lg-4 text-lg-end">
+                @if (!Auth.EstaAutenticado)
+                {
+                    <a href="/login" class="btn btn-primary btn-lg px-4">Iniciar sesión</a>
+                }
+                else
+                {
+                    <span class="badge text-bg-success fs-6 p-3">
+                        Sesión activa: @Auth.SesionActual?.Usuario
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
+</div>

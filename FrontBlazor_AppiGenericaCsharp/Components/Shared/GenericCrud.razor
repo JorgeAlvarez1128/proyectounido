@@ -1,81 +1,90 @@
 @using FrontBlazor_AppiGenericaCsharp.Services
 @inject ApiService Api
+@inject AuthSessionService Auth
 
 <div class="card mb-4 shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold">@Title</span>
         <button class="btn btn-outline-primary btn-sm" @onclick="CargarAsync">Recargar</button>
     </div>
+
     <div class="card-body">
         @if (!string.IsNullOrWhiteSpace(Message))
         {
             <div class="alert @(IsError ? "alert-danger" : "alert-success")" role="alert">@Message</div>
         }
 
-        <EditForm Model="FormData" OnValidSubmit="GuardarAsync">
-            <DataAnnotationsValidator />
-            <div class="row g-3">
-                @foreach (var field in Fields)
-                {
-                    if (IsHiddenByFilter(field.Name))
+        @if (PuedeCrear || PuedeActualizar)
+        {
+            <EditForm Model="FormData" OnValidSubmit="GuardarAsync" FormName="@FormName">
+                <DataAnnotationsValidator />
+
+                <div class="row g-3">
+                    @foreach (var field in Fields)
                     {
-                        continue;
+                        if (IsHiddenByFilter(field.Name))
+                        {
+                            continue;
+                        }
+
+                        <div class="col-12 @(field.Multiline ? string.Empty : "col-md-6")">
+                            <label class="form-label">@field.Label</label>
+
+                            @if (field.IsForeignKey)
+                            {
+                                <select class="form-select"
+                                        value="@GetFieldValue(field.Name)"
+                                        disabled="@IsFieldDisabled(field)"
+                                        @onchange="(e) => SetFieldValue(field, e.Value?.ToString())">
+                                    @if (!field.Required)
+                                    {
+                                        <option value="">-- Seleccionar --</option>
+                                    }
+                                    @foreach (var option in GetLookupOptions(field.Name))
+                                    {
+                                        <option value="@option.Value">@option.Text</option>
+                                    }
+                                </select>
+                            }
+                            else if (field.Type == FieldType.Boolean)
+                            {
+                                <select class="form-select"
+                                        value="@GetFieldValue(field.Name)"
+                                        disabled="@IsFieldDisabled(field)"
+                                        @onchange="(e) => SetFieldValue(field, e.Value?.ToString())">
+                                    <option value="true">Sí</option>
+                                    <option value="false">No</option>
+                                </select>
+                            }
+                            else if (field.Multiline)
+                            {
+                                <textarea class="form-control"
+                                          rows="3"
+                                          value="@GetFieldValue(field.Name)"
+                                          disabled="@IsFieldDisabled(field)"
+                                          @onchange="(e) => SetFieldValue(field, e.Value?.ToString())"></textarea>
+                            }
+                            else
+                            {
+                                <input class="form-control"
+                                       type="@GetHtmlInputType(field.Type)"
+                                       value="@GetFieldValue(field.Name)"
+                                       disabled="@IsFieldDisabled(field)"
+                                       @onchange="(e) => SetFieldValue(field, e.Value?.ToString())" />
+                            }
+                        </div>
                     }
+                </div>
 
-                    <div class="col-12 @(field.Multiline ? "" : "col-md-6")">
-                        <label class="form-label">@field.Label</label>
-
-                        @if (field.IsForeignKey)
-                        {
-                            <select class="form-select"
-                                    value="@GetFieldValue(field.Name)"
-                                    disabled="@IsFieldDisabled(field)"
-                                    @onchange="(e) => SetFieldValue(field, e.Value?.ToString())">
-                                @if (!field.Required)
-                                {
-                                    <option value="">-- Seleccionar --</option>
-                                }
-                                @foreach (var option in GetLookupOptions(field.Name))
-                                {
-                                    <option value="@option.Value">@option.Text</option>
-                                }
-                            </select>
-                        }
-                        else if (field.Type == FieldType.Boolean)
-                        {
-                            <select class="form-select"
-                                    value="@GetFieldValue(field.Name)"
-                                    disabled="@IsFieldDisabled(field)"
-                                    @onchange="(e) => SetFieldValue(field, e.Value?.ToString())">
-                                <option value="true">Sí</option>
-                                <option value="false">No</option>
-                            </select>
-                        }
-                        else if (field.Multiline)
-                        {
-                            <textarea class="form-control"
-                                      rows="3"
-                                      value="@GetFieldValue(field.Name)"
-                                      disabled="@IsFieldDisabled(field)"
-                                      @onchange="(e) => SetFieldValue(field, e.Value?.ToString())"></textarea>
-                        }
-                        else
-                        {
-                            <input class="form-control"
-                                   type="@GetHtmlInputType(field.Type)"
-                                   value="@GetFieldValue(field.Name)"
-                                   disabled="@IsFieldDisabled(field)"
-                                   @onchange="(e) => SetFieldValue(field, e.Value?.ToString())" />
-                        }
-                    </div>
-                }
-            </div>
-
-            <div class="d-flex gap-2 mt-3">
-                <button class="btn btn-primary" type="submit">@(Editing ? "Actualizar" : "Crear")</button>
-                <button class="btn btn-secondary" type="button" @onclick="LimpiarFormulario">Limpiar</button>
-            </div>
-        </EditForm>
+                <div class="d-flex gap-2 mt-3">
+                    @if ((Editing && PuedeActualizar) || (!Editing && PuedeCrear))
+                    {
+                        <button class="btn btn-primary" type="submit">@(Editing ? "Actualizar" : "Crear")</button>
+                    }
+                    <button class="btn btn-secondary" type="button" @onclick="LimpiarFormulario">Limpiar</button>
+                </div>
+            </EditForm>
+        }
 
         <div class="table-responsive mt-4">
             <table class="table table-striped table-hover align-middle">
@@ -109,8 +118,14 @@
                                     {
                                         <button class="btn btn-sm btn-info" type="button" @onclick="() => SeleccionarAsync(row)">Seleccionar</button>
                                     }
-                                    <button class="btn btn-sm btn-warning" type="button" @onclick="() => Editar(row)">Editar</button>
-                                    <button class="btn btn-sm btn-danger" type="button" @onclick="() => EliminarAsync(row)">Eliminar</button>
+                                    @if (PuedeActualizar)
+                                    {
+                                        <button class="btn btn-sm btn-warning" type="button" @onclick="() => Editar(row)">Editar</button>
+                                    }
+                                    @if (PuedeEliminar)
+                                    {
+                                        <button class="btn btn-sm btn-danger" type="button" @onclick="() => EliminarAsync(row)">Eliminar</button>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -139,6 +154,11 @@
     private string Message { get; set; } = string.Empty;
     private bool IsError { get; set; }
 
+    private bool PuedeCrear => Auth.PuedeCrear();
+    private bool PuedeActualizar => Auth.PuedeActualizar();
+    private bool PuedeEliminar => Auth.PuedeEliminar();
+    private string FormName => $"crud-{TableName}";
+
     protected override async Task OnParametersSetAsync()
     {
         EnsureFormDefaults();
@@ -159,20 +179,19 @@
 
     private async Task GuardarAsync()
     {
-        ApplyParentFilterToPayload();
+        if ((!Editing && !PuedeCrear) || (Editing && !PuedeActualizar))
+        {
+            Message = "No tienes permisos para esta operación.";
+            IsError = true;
+            return;
+        }
 
+        ApplyParentFilterToPayload();
         var payload = BuildPayload();
 
-        (bool exito, string mensaje) result;
-
-        if (Editing)
-        {
-            result = await Api.ActualizarAsync(TableName, EditKeys, payload);
-        }
-        else
-        {
-            result = await Api.CrearAsync(TableName, payload);
-        }
+        (bool exito, string mensaje) result = Editing
+            ? await Api.ActualizarAsync(TableName, EditKeys, payload)
+            : await Api.CrearAsync(TableName, payload);
 
         Message = result.mensaje;
         IsError = !result.exito;
@@ -186,6 +205,13 @@
 
     private void Editar(Dictionary<string, object?> row)
     {
+        if (!PuedeActualizar)
+        {
+            Message = "No tienes permisos para editar.";
+            IsError = true;
+            return;
+        }
+
         FormData = new Dictionary<string, object?>();
 
         foreach (var field in Fields)
@@ -200,6 +226,13 @@
 
     private async Task EliminarAsync(Dictionary<string, object?> row)
     {
+        if (!PuedeEliminar)
+        {
+            Message = "No tienes permisos para eliminar.";
+            IsError = true;
+            return;
+        }
+
         var keys = KeyFields.ToDictionary(k => k, k => GetValueAsString(row, k));
         var result = await Api.EliminarAsync(TableName, keys);
 
@@ -260,39 +293,62 @@
         {
             if (IsHiddenByFilter(field.Name))
             {
-                payload[field.Name] = ParentFilterValue;
                 continue;
             }
 
-            var raw = GetFieldValue(field.Name);
-            payload[field.Name] = ConvertValue(raw, field.Type, field.Required);
+            FormData.TryGetValue(field.Name, out var value);
+
+            if (string.IsNullOrWhiteSpace(value?.ToString()))
+            {
+                payload[field.Name] = null;
+                continue;
+            }
+
+            payload[field.Name] = ParseValue(field, value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(ParentFilterField) && ParentFilterValue is not null)
+        {
+            payload[ParentFilterField!] = ParentFilterValue;
         }
 
         return payload;
     }
 
-    private static object? ConvertValue(string? rawValue, FieldType type, bool required)
+    private object? ParseValue(CrudFieldDefinition field, object? value)
     {
-        if (string.IsNullOrWhiteSpace(rawValue))
+        var text = value?.ToString();
+        if (string.IsNullOrWhiteSpace(text))
         {
-            return required && type == FieldType.Boolean ? false : null;
+            return null;
         }
 
-        return type switch
+        return field.Type switch
         {
-            FieldType.Integer => int.TryParse(rawValue, out var i) ? i : null,
-            FieldType.Long => long.TryParse(rawValue, out var l) ? l : null,
-            FieldType.Decimal => decimal.TryParse(rawValue, out var d) ? d : null,
-            FieldType.Boolean => bool.TryParse(rawValue, out var b) && b,
-            _ => rawValue
+            FieldType.Integer => int.TryParse(text, out var i) ? i : null,
+            FieldType.Long => long.TryParse(text, out var l) ? l : null,
+            FieldType.Decimal => decimal.TryParse(text, out var d) ? d : null,
+            FieldType.Boolean => bool.TryParse(text, out var b) ? b : null,
+            _ => text
         };
     }
 
-    private bool IsHiddenByFilter(string fieldName)
+    private static bool AreSameKeys(Dictionary<string, string> a, Dictionary<string, string> b)
     {
-        return !string.IsNullOrWhiteSpace(ParentFilterField)
-               && ParentFilterValue is not null
-               && fieldName == ParentFilterField;
+        if (a.Count != b.Count)
+        {
+            return false;
+        }
+
+        foreach (var kv in a)
+        {
+            if (!b.TryGetValue(kv.Key, out var value) || value != kv.Value)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private bool IsFieldDisabled(CrudFieldDefinition field)
@@ -300,19 +356,17 @@
         return Editing && KeyFields.Contains(field.Name);
     }
 
-    private List<LookupOption> GetLookupOptions(string fieldName)
-    {
-        return LookupByField.TryGetValue(fieldName, out var options) ? options : new();
-    }
+    private bool IsHiddenByFilter(string fieldName)
+        => !string.IsNullOrWhiteSpace(ParentFilterField) && fieldName.Equals(ParentFilterField, StringComparison.OrdinalIgnoreCase);
 
     private string GetFieldValue(string fieldName)
     {
-        if (!FormData.TryGetValue(fieldName, out var value) || value is null)
+        if (FormData.TryGetValue(fieldName, out var value) && value is not null)
         {
-            return string.Empty;
+            return value.ToString() ?? string.Empty;
         }
 
-        return value.ToString() ?? string.Empty;
+        return string.Empty;
     }
 
     private void SetFieldValue(CrudFieldDefinition field, string? value)
@@ -322,39 +376,23 @@
 
     private string GetDisplayValue(Dictionary<string, object?> row, string fieldName)
     {
-        return row.TryGetValue(fieldName, out var value) && value is not null
-            ? value.ToString() ?? string.Empty
-            : string.Empty;
-    }
-
-    private static bool AreSameKeys(Dictionary<string, string> left, Dictionary<string, string> right)
-    {
-        if (left.Count != right.Count)
+        if (row.TryGetValue(fieldName, out var value) && value is not null)
         {
-            return false;
+            return value.ToString() ?? string.Empty;
         }
 
-        foreach (var item in left)
-        {
-            if (!right.TryGetValue(item.Key, out var value) || value != item.Value)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return string.Empty;
     }
 
-    private static string GetValueAsString(Dictionary<string, object?> row, string fieldName)
+    private string GetValueAsString(Dictionary<string, object?> row, string fieldName)
     {
         return row.TryGetValue(fieldName, out var value) && value is not null
             ? value.ToString() ?? string.Empty
             : string.Empty;
     }
 
-    private static string GetHtmlInputType(FieldType type)
-    {
-        return type switch
+    private static string GetHtmlInputType(FieldType fieldType)
+        => fieldType switch
         {
             FieldType.Integer => "number",
             FieldType.Long => "number",
@@ -362,5 +400,11 @@
             FieldType.Date => "date",
             _ => "text"
         };
+
+    private IEnumerable<LookupOption> GetLookupOptions(string fieldName)
+    {
+        return LookupByField.TryGetValue(fieldName, out var options)
+            ? options
+            : Enumerable.Empty<LookupOption>();
     }
 }

@@ -1,0 +1,55 @@
+@page "/login"
+@rendermode InteractiveServer
+@attribute [AllowAnonymous]
+@inject AuthSessionService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Iniciar sesión</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h1 class="h4 mb-3 text-center">Inicio de sesión</h1>
+
+                    @if (!string.IsNullOrWhiteSpace(_mensaje))
+                    {
+                        <div class="alert @(_exito ? "alert-success" : "alert-danger")" role="alert">@_mensaje</div>
+                    }
+
+                    <EditForm Model="_login" OnValidSubmit="OnSubmitAsync" FormName="loginForm">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Usuario (email)</label>
+                            <InputText class="form-control" @bind-Value="_login.Usuario" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña</label>
+                            <InputText class="form-control" type="password" @bind-Value="_login.Contrasena" />
+                        </div>
+                        <button class="btn btn-primary w-100" type="submit">Ingresar</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly LoginRequest _login = new();
+    private string? _mensaje;
+    private bool _exito;
+
+    private async Task OnSubmitAsync()
+    {
+        var (ok, mensaje) = await Auth.LoginAsync(_login);
+        _exito = ok;
+        _mensaje = ok ? "Bienvenido al sistema." : mensaje;
+
+        if (ok)
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+}
