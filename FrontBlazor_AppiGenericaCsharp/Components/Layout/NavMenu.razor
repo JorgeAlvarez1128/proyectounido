@@ -1,9 +1,15 @@
-﻿@inject AuthSessionService Auth
+@inject AuthSessionService Auth
 @inject NavigationManager Nav
 
-<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row navbar navbar-dark brand-header">
     <div class="container-fluid">
-                <a class="navbar-brand" href="">Proyecto Unido</a>
+        <a class="navbar-brand brand-lockup" href="">
+            <img src="images/logo-arsenal.png" alt="Logo Arsenal" class="brand-logo" />
+            <span>
+                <span class="brand-title">Arsenal</span>
+                <span class="brand-subtitle">Proyecto Unido</span>
+            </span>
+        </a>
     </div>
 </div>
 
@@ -12,42 +18,62 @@
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Home</NavLink>
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="nav-letter">H</span> Home
+            </NavLink>
         </div>
 
         @if (!Auth.EstaAutenticado)
         {
             <div class="nav-item px-3">
-                <NavLink class="nav-link fw-bold text-warning" href="login">🔐 Iniciar sesión</NavLink>
+                <NavLink class="nav-link login-link" href="login">
+                    <span class="nav-letter">L</span> Iniciar sesion
+                </NavLink>
             </div>
         }
         else
         {
             <div class="nav-item px-3">
-                <span class="nav-link text-info">@Auth.SesionActual?.Usuario</span>
+                <span class="nav-link user-chip">
+                    <span class="nav-letter">U</span> @Auth.SesionActual?.Usuario
+                </span>
             </div>
 
             <AuthorizeView>
                 <Authorized>
                     @if (PuedeVerRuta("/red"))
                     {
-                        <div class="nav-item px-3"><NavLink class="nav-link" href="red">CRUD Red</NavLink></div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="red"><span class="nav-letter">R</span> CRUD Red</NavLink>
+                        </div>
                     }
+
                     @if (PuedeVerRuta("/investigacion"))
                     {
-                        <div class="nav-item px-3"><NavLink class="nav-link" href="investigacion">CRUD Investigación</NavLink></div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="investigacion"><span class="nav-letter">I</span> CRUD Investigacion</NavLink>
+                        </div>
                     }
+
                     @if (PuedeVerRuta("/aliado"))
                     {
-                        <div class="nav-item px-3"><NavLink class="nav-link" href="aliado">CRUD Aliado</NavLink></div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="aliado"><span class="nav-letter">A</span> CRUD Aliado</NavLink>
+                        </div>
                     }
+
                     @if (PuedeVerRuta("/gestion-profesoral"))
                     {
-                        <div class="nav-item px-3"><NavLink class="nav-link" href="gestion-profesoral">Gestión Profesoral</NavLink></div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="gestion-profesoral"><span class="nav-letter">G</span> Gestion Profesoral</NavLink>
+                        </div>
                     }
+
                     @if (PuedeVerRuta("/gestion-profesoral-tablas"))
                     {
-                        <div class="nav-item px-3"><NavLink class="nav-link" href="gestion-profesoral-tablas">Tablas Gestión Profesoral</NavLink></div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="gestion-profesoral-tablas"><span class="nav-letter">T</span> Tablas Gestion</NavLink>
+                        </div>
                     }
                 </Authorized>
             </AuthorizeView>
@@ -55,12 +81,12 @@
             @if (Auth.TieneRol("Administrador"))
             {
                 <div class="nav-item px-3">
-                    <span class="nav-link text-warning">Admin: CRUD Usuarios y Roles habilitado en API</span>
+                    <span class="nav-link admin-note">Admin: usuarios y roles habilitados en API</span>
                 </div>
             }
 
             <div class="nav-item px-3">
-                <button class="btn btn-outline-light btn-sm mt-2" @onclick="CerrarSesion">Cerrar sesión</button>
+                <button class="btn btn-outline-light btn-sm logout-button" @onclick="CerrarSesion">Cerrar sesion</button>
             </div>
         }
     </nav>
@@ -74,10 +100,10 @@
         Auth.OnAuthChanged += ActualizarVista;
     }
 
-private bool PuedeVerRuta(string ruta)
-{
-    return Auth.TieneRol("Administrador") || Auth.TieneRol("Consulta") || Auth.TieneRuta(ruta);
-}
+    private bool PuedeVerRuta(string ruta)
+    {
+        return Auth.TieneRol("Administrador") || Auth.TieneRol("Consulta") || Auth.TieneRuta(ruta);
+    }
 
     private void CerrarSesion()
     {

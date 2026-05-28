@@ -1,29 +1,89 @@
-﻿@page "/"
+@page "/"
 @inject AuthSessionService Auth
 
-<PageTitle>Inicio</PageTitle>
+<PageTitle>Inicio | Arsenal</PageTitle>
 
-<div class="container py-5">
-    <div class="p-4 p-md-5 rounded-4 shadow-sm border bg-white">
-        <div class="row align-items-center g-4">
-            <div class="col-12 col-lg-8">
-                <h1 class="display-6 fw-bold mb-3">Proyecto API Genérica</h1>
-                <p class="lead text-secondary mb-0">
-                    Accede con tu usuario y contraseña para ver menús y acciones según tu rol.
-                </p>
-            </div>
-            <div class="col-12 col-lg-4 text-lg-end">
+<div class="home-shell">
+    <section class="arsenal-hero">
+        <div class="hero-copy">
+            <span class="eyebrow">Proyecto Unido</span>
+            <h1>Gestion academica con identidad Arsenal</h1>
+            <p>
+                Administra redes, investigacion, aliados y gestion profesoral desde una interfaz clara,
+                moderna y alineada con los colores del Arsenal.
+            </p>
+
+            <div class="hero-actions">
                 @if (!Auth.EstaAutenticado)
                 {
-                    <a href="/login" class="btn btn-primary btn-lg px-4">Iniciar sesión</a>
+                    <a href="/login" class="btn btn-primary btn-lg px-4">Iniciar sesion</a>
+                    <a href="#modulos" class="btn btn-outline-light btn-lg px-4">Ver modulos</a>
                 }
                 else
                 {
-                    <span class="badge text-bg-success fs-6 p-3">
-                        Sesión activa: @Auth.SesionActual?.Usuario
+                    <span class="session-pill">
+                        Sesion activa: @Auth.SesionActual?.Usuario
                     </span>
+                    <a href="#modulos" class="btn btn-outline-light btn-lg px-4">Ir a modulos</a>
                 }
             </div>
         </div>
-    </div>
+
+        <div class="hero-media">
+            <div class="hero-image-frame">
+                <img src="images/hero-arsenal.jpg" alt="Imagen principal Arsenal" class="hero-image" />
+            </div>
+
+            <div class="hero-stat-card">
+                <span class="stat-number">4</span>
+                <span class="stat-label">modulos principales</span>
+            </div>
+        </div>
+    </section>
+
+    <section id="modulos" class="module-section">
+        <div class="section-heading">
+            <span class="eyebrow dark">Panel principal</span>
+            <h2>Modulos del sistema</h2>
+            <p>Accede a las opciones disponibles segun tu rol de usuario.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="module-card module-red">
+                    <span class="module-icon">R</span>
+                    <h3>Red</h3>
+                    <p>Consulta y administra la informacion relacionada con redes academicas.</p>
+                    <a href="/red">Abrir modulo</a>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="module-card module-red">
+                    <span class="module-icon">I</span>
+                    <h3>Investigacion</h3>
+                    <p>Gestiona proyectos, lineas y datos asociados a investigacion.</p>
+                    <a href="/investigacion">Abrir modulo</a>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="module-card module-red">
+                    <span class="module-icon">A</span>
+                    <h3>Aliados</h3>
+                    <p>Organiza aliados, instituciones y relaciones estrategicas.</p>
+                    <a href="/aliado">Abrir modulo</a>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="module-card module-red">
+                    <span class="module-icon">G</span>
+                    <h3>Gestion profesoral</h3>
+                    <p>Administra la informacion docente y sus tablas relacionadas.</p>
+                    <a href="/gestion-profesoral">Abrir modulo</a>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>

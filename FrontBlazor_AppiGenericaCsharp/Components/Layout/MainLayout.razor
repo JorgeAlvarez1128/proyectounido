@@ -1,13 +1,18 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+<div class="page arsenal-shell">
+    <aside class="sidebar">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
+    <main class="main-panel">
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <div class="top-title">
+                <span>Sistema academico</span>
+                <strong>Panel de gestion</strong>
+            </div>
+
+            <a class="top-action" href="/">Inicio</a>
         </div>
 
         <article class="content px-4">
@@ -17,7 +22,7 @@
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    Ocurrio un error inesperado.
+    <a href="." class="reload">Recargar</a>
+    <span class="dismiss">X</span>
 </div>
